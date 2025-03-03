@@ -8,7 +8,7 @@
         body {
             font-family: Arial, sans-serif;
             text-align: center;
-            background-color: #f4f4f4;
+            background-color: #fffbf0;
         }
         .game-container {
             display: grid;
@@ -20,28 +20,29 @@
         .card {
             width: 100px;
             height: 100px;
-            background-color: #ddd;
+            background-color: #f8b400;
+            color: white;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 2em;
             cursor: pointer;
-            border: 2px solid #555;
+            border: 2px solid #ff6700;
             transition: background-color 0.3s, transform 0.3s;
             border-radius: 10px;
         }
         .card:hover {
-            background-color: #bbb;
+            background-color: #ff8500;
         }
         .matched {
             background-color: #4caf50 !important;
             color: white;
             transform: scale(1.1);
         }
-        .level-container {
-            margin-top: 20px;
+        h1, h2 {
+            color: #ff6700;
         }
-        .level-button {
+        button {
             background-color: #007BFF;
             color: white;
             border: none;
@@ -52,31 +53,102 @@
             margin-top: 20px;
             transition: background-color 0.3s, transform 0.2s;
         }
-        .level-button:hover {
+        button:hover {
             background-color: #0056b3;
             transform: scale(1.1);
+        }
+        #game-over {
+            display: none;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        #game-over button {
+            background-color: #ff6700;
+        }
+        #start-game-container {
+            display: block;
+            margin-top: 50px;
+        }
+        .game-section {
+            display: none;
         }
     </style>
 </head>
 <body>
-    <h1 style="color: #333;">เกมจับคู่ภาพ</h1>
-    <h2 id="level-display">ด่าน: 1</h2>
-    <div class="game-container" id="game-board"></div>
-    <div class="level-container">
-        <button class="level-button" onclick="nextLevel()">ด่านถัดไป</button>
+    <h1>เกมจับคู่ภาพ</h1>
+    <div id="start-game-container">
+        <button onclick="startGame()">เริ่มเกม</button>
     </div>
+    <div class="game-section" id="game-section">
+        <h2 id="level-display">ด่าน: 1</h2>
+        <h2 id="score-display">คะแนน: 0</h2>
+        <h2 id="high-score-display">คะแนนสูงสุด: 0</h2>
+        <h2 id="timer-display">เวลา: 30 วินาที</h2>
+        <div class="game-container" id="game-board"></div>
+        <button onclick="nextLevel()">ด่านถัดไป</button>
+    </div>
+
+    <div id="game-over">
+        <h2>คุณแพ้! เวลาหมดแล้ว!</h2>
+        <p>คะแนนในตอนนี้: <span id="current-score">0</span></p>
+        <button onclick="resetGame()">เริ่มเกมใหม่</button>
+        <button onclick="goHome()">กลับสู่หน้าแรก</button>
+    </div>
+
     <script>
         let level = 1;
+        let score = 0;
+        let highScore = localStorage.getItem('highScore') || 0;
+        let timer;
+        let timeLeft = 30;
         let selectedCards = [];
         let matchedCards = [];
         let items;
+
+        document.getElementById('high-score-display').textContent = `คะแนนสูงสุด: ${highScore}`;
+        
+        function updateScore(points) {
+            score += points;
+            document.getElementById('score-display').textContent = `คะแนน: ${score}`;
+            
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('highScore', highScore);
+                document.getElementById('high-score-display').textContent = `คะแนนสูงสุด: ${highScore}`;
+            }
+        }
+        
+        function startTimer() {
+            clearInterval(timer);
+            timeLeft = 30;
+            document.getElementById('timer-display').textContent = `เวลา: ${timeLeft} วินาที`;
+            timer = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timer-display').textContent = `เวลา: ${timeLeft} วินาที`;
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    showGameOver(); // แสดงผลเมื่อเวลาเหลือ 0
+                }
+            }, 1000);
+        }
+        
+        function stopTimer() {
+            clearInterval(timer);
+        }
         
         function generateItems(level) {
             const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
             let pairs = alphabet.slice(0, level);
             return [...pairs, ...pairs].sort(() => 0.5 - Math.random());
         }
-
+        
         function createBoard() {
             const board = document.getElementById('game-board');
             board.innerHTML = '';
@@ -86,12 +158,11 @@
                 let card = document.createElement('div');
                 card.classList.add('card');
                 card.dataset.index = index;
-                card.style.backgroundColor = getRandomColor();
                 card.addEventListener('click', flipCard);
                 board.appendChild(card);
             });
         }
-
+        
         function flipCard() {
             if (selectedCards.length < 2 && !this.classList.contains('matched')) {
                 let index = this.dataset.index;
@@ -102,37 +173,82 @@
                 }
             }
         }
-
+        
         function checkMatch() {
             if (selectedCards[0].textContent === selectedCards[1].textContent) {
                 selectedCards.forEach(card => card.classList.add('matched'));
                 matchedCards.push(...selectedCards);
+                updateScore(5);
             } else {
                 selectedCards.forEach(card => card.textContent = '');
             }
             selectedCards = [];
-
+            
             if (matchedCards.length === items.length) {
+                stopTimer();
                 setTimeout(() => alert(`คุณผ่านด่าน ${level}!`), 300);
             }
         }
-
+        
         function nextLevel() {
             if (matchedCards.length === items.length) {
                 level++;
                 document.getElementById('level-display').textContent = `ด่าน: ${level}`;
                 createBoard();
+                flipAllCards();  // เปิดไพ่ทั้งหมดก่อนเริ่มด่านใหม่
+                setTimeout(startTimer, 1000); // เริ่มจับเวลา
             } else {
                 alert('คุณต้องจับคู่ให้ครบก่อน!');
             }
         }
-
-        function getRandomColor() {
-            const colors = ['#FFDDC1', '#FFABAB', '#FFC3A0', '#D5AAFF', '#85E3FF', '#B9FBC0'];
-            return colors[Math.floor(Math.random() * colors.length)];
+        
+        function resetGame() {
+            level = 1;
+            score = 0;
+            document.getElementById('level-display').textContent = `ด่าน: 1`;
+            document.getElementById('score-display').textContent = `คะแนน: 0`;
+            document.getElementById('game-over').style.display = 'none'; // ซ่อนผลแพ้
+            createBoard();
+            flipAllCards(); // เปิดไพ่ทั้งหมดก่อนเริ่มเกมใหม่
+            setTimeout(startTimer, 1000); // เริ่มจับเวลา
         }
 
-        createBoard();
+        function goHome() {
+            // ซ่อนส่วนของเกม
+            document.getElementById('game-section').style.display = 'none';
+            // แสดงส่วนเริ่มเกม
+            document.getElementById('start-game-container').style.display = 'block';
+            // รีเซ็ตค่าต่างๆ ของเกม
+            level = 1;
+            score = 0;
+            document.getElementById('level-display').textContent = `ด่าน: 1`;
+            document.getElementById('score-display').textContent = `คะแนน: 0`;
+        }
+        
+        function showGameOver() {
+            document.getElementById('current-score').textContent = score;
+            document.getElementById('game-over').style.display = 'block'; // แสดงผลแพ้
+        }
+        
+        function flipAllCards() {
+            const allCards = document.querySelectorAll('.card');
+            allCards.forEach(card => {
+                card.textContent = items[card.dataset.index];
+                card.classList.add('matched');
+            });
+            setTimeout(() => {
+                allCards.forEach(card => card.classList.remove('matched'));
+                allCards.forEach(card => card.textContent = '');
+            }, 1000);
+        }
+
+        function startGame() {
+            document.getElementById('start-game-container').style.display = 'none'; // ซ่อนปุ่มเริ่มเกม
+            document.getElementById('game-section').style.display = 'block'; // แสดงส่วนของเกม
+            createBoard();
+            flipAllCards(); // เปิดไพ่ทั้งหมดก่อนเริ่มเกม
+            setTimeout(startTimer, 1000); // เริ่มจับเวลา
+        }
     </script>
 </body>
 </html>

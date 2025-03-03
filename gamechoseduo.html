@@ -8,6 +8,7 @@
         body {
             font-family: Arial, sans-serif;
             text-align: center;
+            background-color: #f4f4f4;
         }
         .game-container {
             display: grid;
@@ -19,31 +20,73 @@
         .card {
             width: 100px;
             height: 100px;
-            background-color: lightgray;
+            background-color: #ddd;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 2em;
             cursor: pointer;
-            border: 1px solid #000;
+            border: 2px solid #555;
+            transition: background-color 0.3s, transform 0.3s;
+            border-radius: 10px;
+        }
+        .card:hover {
+            background-color: #bbb;
+        }
+        .matched {
+            background-color: #4caf50 !important;
+            color: white;
+            transform: scale(1.1);
+        }
+        .level-container {
+            margin-top: 20px;
+        }
+        .level-button {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1.2em;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 20px;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+        .level-button:hover {
+            background-color: #0056b3;
+            transform: scale(1.1);
         }
     </style>
 </head>
 <body>
-    <h1>เกมจับคู่ภาพ </h1>
+    <h1 style="color: #333;">เกมจับคู่ภาพ</h1>
+    <h2 id="level-display">ด่าน: 1</h2>
     <div class="game-container" id="game-board"></div>
+    <div class="level-container">
+        <button class="level-button" onclick="nextLevel()">ด่านถัดไป</button>
+    </div>
     <script>
-        const items = ['A', 'B', 'C', 'D','E','F', 'A', 'B', 'C', 'D','E','F'];
-        let shuffledItems = items.sort(() => 0.5 - Math.random());
+        let level = 1;
         let selectedCards = [];
         let matchedCards = [];
+        let items;
+        
+        function generateItems(level) {
+            const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+            let pairs = alphabet.slice(0, level);
+            return [...pairs, ...pairs].sort(() => 0.5 - Math.random());
+        }
 
         function createBoard() {
             const board = document.getElementById('game-board');
-            shuffledItems.forEach((item, index) => {
+            board.innerHTML = '';
+            matchedCards = [];
+            items = generateItems(level);
+            items.forEach((item, index) => {
                 let card = document.createElement('div');
                 card.classList.add('card');
                 card.dataset.index = index;
+                card.style.backgroundColor = getRandomColor();
                 card.addEventListener('click', flipCard);
                 board.appendChild(card);
             });
@@ -52,9 +95,8 @@
         function flipCard() {
             if (selectedCards.length < 2 && !this.classList.contains('matched')) {
                 let index = this.dataset.index;
-                this.textContent = shuffledItems[index];
+                this.textContent = items[index];
                 selectedCards.push(this);
-
                 if (selectedCards.length === 2) {
                     setTimeout(checkMatch, 500);
                 }
@@ -71,8 +113,23 @@
             selectedCards = [];
 
             if (matchedCards.length === items.length) {
-                alert('คุณชนะแล้ว!');
+                setTimeout(() => alert(`คุณผ่านด่าน ${level}!`), 300);
             }
+        }
+
+        function nextLevel() {
+            if (matchedCards.length === items.length) {
+                level++;
+                document.getElementById('level-display').textContent = `ด่าน: ${level}`;
+                createBoard();
+            } else {
+                alert('คุณต้องจับคู่ให้ครบก่อน!');
+            }
+        }
+
+        function getRandomColor() {
+            const colors = ['#FFDDC1', '#FFABAB', '#FFC3A0', '#D5AAFF', '#85E3FF', '#B9FBC0'];
+            return colors[Math.floor(Math.random() * colors.length)];
         }
 
         createBoard();
